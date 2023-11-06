@@ -5,6 +5,8 @@ import cors from "cors";
 import helmet from "helmet";
 import express, { Response } from "express";
 
+import type { BasicResponse } from "./models/BasicResponse.d.ts";
+
 const PORT = process.env.PORT || 5000;
 
 const app = express();
@@ -23,13 +25,13 @@ app.disable("x-powered-by");
 
 app.get("/", async (_, res: Response) => {
     try {
-        return res.status(200).json({
+        return res.status(200).json(<BasicResponse>{
             method: "SERVER",
             status: res.statusCode,
             message: "Server OK",
         });
     } catch (error) {
-        return res.status(500).json({
+        return res.status(500).json(<BasicResponse>{
             method: "SERVER",
             status: res.statusCode,
             message: "Server Not OK",
