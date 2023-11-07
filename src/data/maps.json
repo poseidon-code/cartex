@@ -1,0 +1,44 @@
+[
+    {
+        "provider": "Google Maps Satellite",
+        "id": "google-maps-satellite",
+        "min_zoom": 1,
+        "max_zoom": 22,
+        "provider_url": "http://mt1.google.com/vt/lyrs=s&z={z}&y={y}&x={x}"
+    },
+    {
+        "provider": "Google Maps Roadmap",
+        "id": "google-maps-roadmap",
+        "min_zoom": 1,
+        "max_zoom": 22,
+        "provider_url": "http://mt1.google.com/vt/lyrs=m&z={z}&y={y}&x={x}"
+    },
+    {
+        "provider": "Google Maps Hybrid",
+        "id": "google-maps-hybrid",
+        "min_zoom": 1,
+        "max_zoom": 22,
+        "provider_url": "http://mt1.google.com/vt/lyrs=y&z={z}&y={y}&x={x}"
+    },
+    {
+        "provider": "Google Maps Terrain",
+        "id": "google-maps-terrain",
+        "min_zoom": 1,
+        "max_zoom": 22,
+        "provider_url": "http://mt1.google.com/vt/lyrs=t&z={z}&y={y}&x={x}"
+    },
+    {
+        "provider": "Open Street Maps",
+        "id": "open-street-maps",
+        "min_zoom": 1,
+        "max_zoom": 19,
+        "provider_url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    },
+    {
+        "provider": "ArcGIS",
+        "id": "arcgis",
+        "min_zoom": 1,
+        "max_zoom": 18,
+        "provider_url": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png"
+    }
+]
