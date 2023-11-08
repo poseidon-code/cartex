@@ -7,6 +7,8 @@ import express, { Response } from "express";
 
 import type { BasicResponse } from "./models/BasicResponse.d.ts";
 
+import MapRoutes from "./routes/map.js";
+
 const PORT = process.env.PORT || 5000;
 
 const app = express();
@@ -22,6 +24,8 @@ app.use(
 );
 app.use(express.json());
 app.disable("x-powered-by");
+
+app.use("/map", MapRoutes);
 
 app.get("/", async (_, res: Response) => {
     try {
