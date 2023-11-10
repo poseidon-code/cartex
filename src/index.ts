@@ -8,6 +8,7 @@ import express, { Response } from "express";
 import type { BasicResponse } from "./models/BasicResponse.d.ts";
 
 import MapRoutes from "./routes/map.js";
+import TileRoutes from "./routes/tile.js";
 
 const PORT = process.env.PORT || 5000;
 
@@ -26,6 +27,7 @@ app.use(express.json());
 app.disable("x-powered-by");
 
 app.use("/map", MapRoutes);
+app.use("/tile", TileRoutes);
 
 app.get("/", async (_, res: Response) => {
     try {
