@@ -97,3 +97,48 @@ export const tile_local = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const tile_provider = async (req: Request, res: Response) => {
+    try {
+        const slug = req.url.match(/\/provider\/(.*)/);
+
+        const url = (slug && slug[1]) ?? undefined;
+
+        if (url) {
+            let content_type;
+
+            const image_buffer = await fetch(url).then(async (fres) => {
+                if (fres.ok) {
+                    const data = await fres.arrayBuffer();
+                    content_type = fres.headers.get("content-type");
+
+                    return Buffer.from(data);
+                } else {
+                    return res.status(400).json(<BasicResponse>{
+                        method: "TILE",
+                        status: res.statusCode,
+                        message: `Error fetching the tile image from '${url}'`,
+                    });
+                }
+            });
+
+            if (image_buffer) {
+                return res.status(200).set("Content-Type", content_type).send(image_buffer);
+            }
+        } else {
+            return res.status(400).json(<BasicResponse>{
+                method: "TILE",
+                status: res.statusCode,
+                message: `No provider URL passed.`,
+            });
+        }
+    } catch (error) {
+        process.env.NODE_ENV !== "production" && console.error(error);
+
+        return res.status(500).json(<BasicResponse>{
+            method: "TILE",
+            status: res.statusCode,
+            message: `Internal Server Error : /tile/provider/*:tile_provider()`,
+        });
+    }
+};
