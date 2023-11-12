@@ -105,12 +105,12 @@ export const tile_provider = async (req: Request, res: Response) => {
         const url = (slug && slug[1]) ?? undefined;
 
         if (url) {
-            let content_type;
+            let content_type: string = "image/jpg";
 
             const image_buffer = await fetch(url).then(async (fres) => {
                 if (fres.ok) {
                     const data = await fres.arrayBuffer();
-                    content_type = fres.headers.get("content-type");
+                    content_type = fres.headers.get("content-type") ?? "image/jpg";
 
                     return Buffer.from(data);
                 } else {
