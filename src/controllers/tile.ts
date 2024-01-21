@@ -40,7 +40,7 @@ export const tile_local = async (req: Request, res: Response) => {
                             });
                         }
 
-                        const tile_path = path.join(tile_id_directory, z, y, `${z}_${y}_${x}.jpg`);
+                        const tile_path = path.join(tile_id_directory, z, y, `${z}_${y}_${x}.${map.extension}`);
 
                         try {
                             if (fs.statSync(tile_path).isFile()) {
@@ -93,7 +93,7 @@ export const tile_local = async (req: Request, res: Response) => {
         return res.status(500).json(<BasicResponse>{
             method: "TILE",
             status: res.statusCode,
-            message: `Internal Server Error : ${req.originalUrl}:tile()`,
+            message: `Internal Server Error : ${req.originalUrl}:tile_local()`,
         });
     }
 };
