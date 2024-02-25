@@ -184,7 +184,7 @@ export const download_tiles_local = async (req: Request<{ id: string }, {}, Requ
         return res.status(500).json(<BasicResponse>{
             method: "DATABASE",
             status: res.statusCode,
-            message: `Internal Server Error : ${req.originalUrl}:add_local()`,
+            message: `Internal Server Error : ${req.originalUrl}:download_tiles_local()`,
         });
     }
 };
