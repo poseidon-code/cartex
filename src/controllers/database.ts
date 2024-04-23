@@ -19,172 +19,196 @@ type Tile = {
     z: ZoomLevel;
 };
 
+/**
+ *  {
+ *      "top_left_coordinates" : {
+ *          "latitude" : <value>,
+ *          "longitude" : <value>
+ *      },
+ *      "bottom_right_coordinates" : {
+ *          "latitude" : <value>,
+ *          "longitude" : <value>
+ *      },
+ *      "zoom_levels" : {
+ *          "from" : <value>,
+ *          "to" : <value>
+ *      } | {
+ *          "at" : <value>
+ *      }
+ *  }
+ */
 type RequestBody = {
     top_left_coordinates: Coordinates;
     bottom_right_coordinates: Coordinates;
     zoom_levels: { from: ZoomLevel; to: ZoomLevel } | { at: ZoomLevel };
 };
 
+/**
+ * Converts the latitude & longitude to tile number as per the given zoom level. \
+ * Returns the `x` (column), `y` (row) & `z` (zoom level) of the tile in the world map.
+ */
 const tile_id = (coordinate: Coordinates, zoom: ZoomLevel): Tile => {
     const n: number = Math.pow(2, zoom);
     const latitude_radians = (coordinate.latitude * Math.PI) / 180.0;
 
     const x: number = n * ((coordinate.longitude + 180.0) / 360.0);
-    const y: number =
-        (n * (1.0 - Math.log(Math.tan(latitude_radians) + 1.0 / Math.cos(latitude_radians)) / Math.PI)) / 2.0;
+    const y: number = (n * (1.0 - Math.log(Math.tan(latitude_radians) + 1.0 / Math.cos(latitude_radians)) / Math.PI)) / 2.0; // prettier-ignore
 
-    return { x: Math.floor(x), y: Math.floor(y), z: Math.floor(zoom) };
+    return {
+        x: Math.floor(x),
+        y: Math.floor(y),
+        z: Math.floor(zoom),
+    };
 };
 
+/**
+ * Formats the tile provider URL with tile coordinates. \
+ * Replaces `{x}`, `{y}` & `{z}` in the URL with given tile coordinates.
+ */
 const fetch_url = (url: string, tile: Tile): string => {
-    return url.replace("{x}", tile.x.toString()).replace("{y}", tile.y.toString()).replace("{z}", tile.z.toString());
+    return url
+        .replace("{x}", tile.x.toString())
+        .replace("{y}", tile.y.toString())
+        .replace("{z}", tile.z.toString()); // prettier-ignore
 };
 
+/**
+ * `POST` : `/database/:id` \
+ * Downloads tiles for the requestd map `id` to the server's storage. \
+ * Tiles are download for a regian bounded by the top-left corner coordinates & bottom-right corner coordinates \
+ * of the bounded regian, either for a given zoom level or for a range of zoom levels.
+ */
 export const download_tiles_local = async (req: Request<{ id: string }, {}, RequestBody>, res: Response) => {
     try {
+        const id = req.params.id; // retrieve the map `id` from request parameters
+
+        const tiles_directory = process.env.TILES_DIRECTORY; // retrieve the map tiles directory of the server (environment variable)
+
+        if (!tiles_directory) {
+            // map tiles directory doesn't exits (i.e. `TILES_DIRECTORY` environment variable not set)
+            return res
+                .status(404)
+                .json(
+                    <BasicResponse>{
+                        method: "DATABASE",
+                        status: res.statusCode,
+                        message: `Path to tiles directory not found, set 'TILES_DIRECTORY' environment variable with path to map tiles directory.`,
+                    }
+                ); // prettier-ignore
+        }
+
+        const map = Maps.find((map) => map.id === id); // retrieve the map properties using map `id`
+
+        if (!map) {
+            // failed to find map properties for the given map `id`
+            return res
+                .status(404)
+                .json(
+                    <BasicResponse>{
+                        method: "DATABASE",
+                        status: res.statusCode,
+                        message: `Tiles for the map with ID : '${id}' doesn't exists.`,
+                    }
+                ); // prettier-ignore
+        }
+
+        // retrieve the bounded region coordinates & zoom levels
         const { top_left_coordinates, bottom_right_coordinates, zoom_levels }: RequestBody = req.body;
 
+        // determine the starting & ending zoom levels
+        let start_zoom = 1;
+        let end_zoom = 1;
+
         if ("at" in zoom_levels) {
-            const start_tile: Tile = tile_id(top_left_coordinates, zoom_levels.at);
-            const end_tile: Tile = tile_id(bottom_right_coordinates, zoom_levels.at);
+            // `at` property exists, then starting & endig zoom levels are same
+            start_zoom = zoom_levels.at;
+            end_zoom = zoom_levels.at;
+        } else {
+            start_zoom = zoom_levels.from;
+            end_zoom = zoom_levels.to;
+        }
+
+        if (end_zoom >= map.max_zoom || start_zoom <= map.min_zoom) {
+            // validate the zoom levels for that map
+            return res
+                .status(401)
+                .json(
+                    <BasicResponse>{
+                        method: "DATABASE",
+                        status: res.statusCode,
+                        message: `Invalid zoom level (start, end) : '(${start_zoom}, ${end_zoom})', 
+                                 valid zoom level range for '${map.provider} (${map.id})' is [${map.min_zoom} - ${map.max_zoom}]`,
+                    }
+                ); // prettier-ignore
+        }
+
+        // if range of zoom levels is passed (i.e. `from` & `to` properties present)
+        for (let z = start_zoom; z <= end_zoom; z++) {
+            const start_tile: Tile = tile_id(top_left_coordinates, z); // get the positions of the starting tile at this zoom level
+            const end_tile: Tile = tile_id(bottom_right_coordinates, z); // get the positions of the starting tile at this zoom level
 
             for (let y = start_tile.y; y <= end_tile.y; y++) {
                 for (let x = start_tile.x; x <= end_tile.x; x++) {
-                    const id = req.params.id;
+                    // create the complete tiles directory path as per the tile coordinates, i.e.
+                    // `/<TILES_DIRECTORY>/<MAP_ID>/<ZOOM_LEVEL>/<Y>/`
+                    const tile_directory = path.join(tiles_directory, map.id, z.toString(), y.toString());
 
-                    const tiles_directory = process.env.TILES_DIRECTORY;
+                    // create the complete tile path at current position of `x` & `y` values
+                    // `/<TILES_DIRECTORY>/<MAP_ID>/<ZOOM_LEVEL>/<Y>/<ZOOM_LEVEL>_<Y>_<X>.<FILE_EXTENSION>
+                    const tile_path = path.join(tile_directory, `${z}_${y}_${x}.${map.extension}`);
 
-                    if (!tiles_directory) {
-                        return res.status(404).json(<BasicResponse>{
-                            method: "DATABASE",
-                            status: res.statusCode,
-                            message: `Path to tiles directory not found, set 'TILES_DIRECTORY' environment variable with path to map tiles directory.`,
-                        });
-                    }
+                    if (!fs.existsSync(tile_path)) {
+                        // if the tile image doesn't exists, create the directory of that tile
+                        if (!fs.existsSync(tile_directory)) fs.mkdirSync(tile_directory, { recursive: true });
 
-                    const map = Maps.find((map) => map.id === id);
+                        // format the tile provider URL for the map with the tile's `x`, `y`, & `z` positions
+                        const tile_url = fetch_url(map.provider_url, { x, y, z });
 
-                    if (map) {
-                        if (zoom_levels.at > map.max_zoom || zoom_levels.at < map.min_zoom) {
-                            return res.status(401).json(<BasicResponse>{
-                                method: "DATABASE",
-                                status: res.statusCode,
-                                message: `Invalid zoom level (z) : '${zoom_levels.at}', valid zoom level range for '${map.provider} (${map.id})' is [${map.min_zoom} - ${map.max_zoom}].`,
-                            });
-                        }
-
-                        const tile_directory = path.join(
-                            tiles_directory,
-                            map.id,
-                            zoom_levels.at.toString(),
-                            y.toString()
-                        );
-
-                        const tile_path = path.join(tile_directory, `${zoom_levels.at}_${y}_${x}.${map.extension}`);
-
-                        if (!fs.existsSync(tile_path)) {
-                            if (!fs.existsSync(tile_directory)) fs.mkdirSync(tile_directory, { recursive: true });
-
-                            const tile_url = fetch_url(map.provider_url, { x, y, z: zoom_levels.at });
-
-                            await fetch(tile_url).then(async (fres) => {
-                                if (fres.ok) {
-                                    const data = await fres.arrayBuffer();
-                                    fs.writeFileSync(tile_path, Buffer.from(data));
-                                } else {
-                                    return res.status(400).json(<BasicResponse>{
-                                        method: "DATABASE",
-                                        status: res.statusCode,
-                                        message: `Error downloading the tile image from '${map.provider_url}'`,
-                                    });
-                                }
-                            });
-                        }
-                    } else {
-                        return res.status(404).json(<BasicResponse>{
-                            method: "DATABASE",
-                            status: res.statusCode,
-                            message: `Tiles for the map with ID : '${id}' doesn't exists.`,
-                        });
-                    }
-                }
-            }
-        } else {
-            for (let z = zoom_levels.from; z <= zoom_levels.to; z++) {
-                const start_tile: Tile = tile_id(top_left_coordinates, z);
-                const end_tile: Tile = tile_id(bottom_right_coordinates, z);
-
-                for (let y = start_tile.y; y <= end_tile.y; y++) {
-                    for (let x = start_tile.x; x <= end_tile.x; x++) {
-                        const id = req.params.id;
-
-                        const tiles_directory = process.env.TILES_DIRECTORY;
-
-                        if (!tiles_directory) {
-                            return res.status(404).json(<BasicResponse>{
-                                method: "DATABASE",
-                                status: res.statusCode,
-                                message: `Path to tiles directory not found, set 'TILES_DIRECTORY' environment variable with path to map tiles directory.`,
-                            });
-                        }
-
-                        const map = Maps.find((map) => map.id === id);
-
-                        if (map) {
-                            if (z > map.max_zoom || z < map.min_zoom) {
-                                return res.status(401).json(<BasicResponse>{
-                                    method: "DATABASE",
-                                    status: res.statusCode,
-                                    message: `Invalid zoom level (z) : '${z}', valid zoom level range for '${map.provider} (${map.id})' is [${map.min_zoom} - ${map.max_zoom}].`,
-                                });
-                            }
-
-                            const tile_directory = path.join(tiles_directory, map.id, z.toString(), y.toString());
-
-                            const tile_path = path.join(tile_directory, `${z}_${y}_${x}.${map.extension}`);
-
-                            if (!fs.existsSync(tile_path)) {
-                                if (!fs.existsSync(tile_directory)) fs.mkdirSync(tile_directory, { recursive: true });
-
-                                const tile_url = fetch_url(map.provider_url, { x, y, z });
-
-                                await fetch(tile_url).then(async (fres) => {
-                                    if (fres.ok) {
-                                        const data = await fres.arrayBuffer();
-                                        fs.writeFileSync(tile_path, Buffer.from(data));
-                                    } else {
-                                        return res.status(400).json(<BasicResponse>{
+                        // fetch the tile from the provider
+                        await fetch(tile_url).then(async (fres) => {
+                            if (fres.ok) {
+                                // save the successfully fetched image to local storage
+                                const data = await fres.arrayBuffer();
+                                fs.writeFileSync(tile_path, Buffer.from(data));
+                            } else {
+                                // failed to fetch the tile image
+                                return res
+                                    .status(400)
+                                    .json(
+                                        <BasicResponse>{
                                             method: "DATABASE",
                                             status: res.statusCode,
                                             message: `Error downloading the tile image from '${map.provider_url}'`,
-                                        });
-                                    }
-                                });
+                                        }
+                                    ); // prettier-ignore
                             }
-                        } else {
-                            return res.status(404).json(<BasicResponse>{
-                                method: "DATABASE",
-                                status: res.statusCode,
-                                message: `Tiles for the map with ID : '${id}' doesn't exists.`,
-                            });
-                        }
+                        });
                     }
                 }
             }
         }
 
-        return res.status(200).json(<BasicResponse>{
-            method: "DATABASE",
-            status: res.statusCode,
-            message: `All tiles were added`,
-        });
+        // all tile images have downloaded successfully
+        return res
+            .status(200)
+            .json(
+                <BasicResponse>{
+                    method: "DATABASE",
+                    status: res.statusCode,
+                    message: `All tiles were added`,
+                }
+            ); // prettier-ignore
     } catch (error) {
         process.env.NODE_ENV !== "production" && console.error(error);
 
-        return res.status(500).json(<BasicResponse>{
-            method: "DATABASE",
-            status: res.statusCode,
-            message: `Internal Server Error : ${req.originalUrl}:download_tiles_local()`,
-        });
+        return res
+            .status(500)
+            .json(
+                <BasicResponse>{
+                    method: "DATABASE",
+                    status: res.statusCode,
+                    message: `Internal Server Error : ${req.originalUrl}:download_tiles_local()`,
+                }
+            ); // prettier-ignore
     }
 };
