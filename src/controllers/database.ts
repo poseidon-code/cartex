@@ -128,7 +128,7 @@ export const download_tiles_local = async (req: Request<{ id: string }, {}, Requ
             end_zoom = zoom_levels.to;
         }
 
-        if (end_zoom >= map.max_zoom || start_zoom <= map.min_zoom) {
+        if (end_zoom > map.max_zoom || start_zoom < map.min_zoom) {
             // validate the zoom levels for that map
             return res
                 .status(401)
