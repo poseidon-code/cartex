@@ -1,5 +1,5 @@
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 
 import { Request, Response } from "express";
 
@@ -142,6 +142,8 @@ export const download_tiles_local = async (req: Request<{ id: string }, {}, Requ
                 ); // prettier-ignore
         }
 
+        let fetch_tile_promises = []; // for holding fetch requests of all tile images
+
         // if range of zoom levels is passed (i.e. `from` & `to` properties present)
         for (let z = start_zoom; z <= end_zoom; z++) {
             const start_tile: Tile = tile_id(top_left_coordinates, z); // get the positions of the starting tile at this zoom level
@@ -164,29 +166,49 @@ export const download_tiles_local = async (req: Request<{ id: string }, {}, Requ
                         // format the tile provider URL for the map with the tile's `x`, `y`, & `z` positions
                         const tile_url = fetch_url(map.provider_url, { x, y, z });
 
-                        // fetch the tile from the provider
-                        await fetch(tile_url).then(async (fres) => {
-                            if (fres.ok) {
-                                // save the successfully fetched image to local storage
-                                const data = await fres.arrayBuffer();
-                                fs.writeFileSync(tile_path, Buffer.from(data));
-                            } else {
-                                // failed to fetch the tile image
-                                return res
-                                    .status(400)
-                                    .json(
-                                        <BasicResponse>{
-                                            method: "DATABASE",
-                                            status: res.statusCode,
-                                            message: `Error downloading the tile image from '${map.provider_url}'`,
+                        // add a fetch promise for the tile from the provider
+                        fetch_tile_promises.push(
+                            await fetch(tile_url).then(async (fetch_response) => {
+                                if (fetch_response.ok) {
+                                    // save the successfully fetched image to server's storage
+                                    const data = await fetch_response.arrayBuffer();
+                                    const buffered_data = Buffer.from(data);
+
+                                    fs.writeFile(tile_path, buffered_data, (write_error) => {
+                                        if (write_error) {
+                                            // failed to save the tile image
+                                            return res
+                                                .status(400)
+                                                .json(
+                                                    <BasicResponse>{
+                                                        method: "DATABASE",
+                                                        status: res.statusCode,
+                                                        message: `Error saving the tile image (${z}_${y}_${x}.${map.extension})`,
+                                                    }
+                                                ); // prettier-ignore
                                         }
-                                    ); // prettier-ignore
-                            }
-                        });
+                                    });
+                                } else {
+                                    // failed to fetch the tile image
+                                    return res
+                                        .status(400)
+                                        .json(
+                                            <BasicResponse>{
+                                                method: "DATABASE",
+                                                status: res.statusCode,
+                                                message: `Error downloading the tile image (${z}_${y}_${x}.${map.extension})`,
+                                            }
+                                        ); // prettier-ignore
+                                }
+                            })
+                        );
                     }
                 }
             }
         }
+
+        // fetch all the tiles concurrently
+        await Promise.all(fetch_tile_promises);
 
         // all tile images have downloaded successfully
         return res
