@@ -48,7 +48,7 @@ type RequestBody = {
 };
 
 type RequestParams = {
-    /* `.../database/local/<id>` */
+    /* `.../database/<id>` */
     id: string;
 };
 
@@ -105,17 +105,17 @@ const tile_fetch = async (tile: TileFetch): Promise<any> => {
 };
 
 /**
- * Limits the maximum number of concurrent threads on `Promise.all()`
+ * Limits the maximum number of concurrent threads on `Promise.allSettled()`
  */
 const concurrency_limit = plimit(300);
 
 /**
- * `POST` : `/database/local/:id` \
+ * `POST` : `/database/:id` \
  * Downloads tiles for the requestd map `id` to the server's storage. \
  * Tiles are download for a regian bounded by the top-left corner coordinates & bottom-right corner coordinates \
  * of the bounded regian, either for a given zoom level or for a range of zoom levels.
  */
-export const download_tiles_local = async (req: Request<RequestParams, {}, RequestBody>, res: Response) => {
+export const download_tiles = async (req: Request<RequestParams, {}, RequestBody>, res: Response) => {
     try {
         const id = req.params.id; // retrieve the map `id` from request parameters
 
