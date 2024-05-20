@@ -2,8 +2,12 @@ import { Request, Response } from "express";
 
 import type { BasicResponse } from "../models/BasicResponse.d.ts";
 
-import Maps from "../data/maps.json";
+import Maps from "../data/maps.json" assert { type: "json" };
 
+/**
+ * `POST` : `/map/` \
+ * Provides the list of all the registered map providers found inside 'maps.json'
+ */
 export const list_all = async (req: Request, res: Response) => {
     try {
         return res.status(200).json(Maps);
@@ -18,6 +22,10 @@ export const list_all = async (req: Request, res: Response) => {
     }
 };
 
+/**
+ * `POST` : `/map/:id` \
+ * Provides the registered map providers found inside 'maps.json' for the given `id`
+ */
 export const list_id = async (req: Request, res: Response) => {
     try {
         const id = req.params.id;
