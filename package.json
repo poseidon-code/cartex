@@ -19,7 +19,8 @@
         "dev:ts": "tsc --build --watch",
         "dev:js": "nodemon build/index.js",
         "dev": "concurrently \"npm run dev:*\"",
-        "build": "rm -rf ./build/* && tsc --build"
+        "build": "rm -rf ./build/* && tsc --build",
+        "start": "node ./build/index.js"
     },
     "devDependencies": {
         "@tsconfig/recommended": "^1.0.3",
