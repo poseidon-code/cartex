@@ -1,4 +1,5 @@
 build/
 node_modules/
 tiles/
+src/data/user_maps.json
 .env
