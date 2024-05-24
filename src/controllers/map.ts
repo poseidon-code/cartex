@@ -23,11 +23,12 @@ const RegisteredUserMaps: MapProvider[] = UserMaps as MapProvider[];
 
 /**
  * `GET` : `/map/` \
- * Provides the list of all the registered map providers found inside 'maps.json'
+ * Provides the list of all the registered map providers found inside 'maps.json' & 'user_maps.json'
  */
 export const list_all = async (req: Request, res: Response) => {
     try {
-        return res.status(200).json(Maps);
+        const maps: MapProvider[] = [...RegisteredMaps, ...RegisteredUserMaps];
+        return res.status(200).json(maps);
     } catch (error) {
         process.env.NODE_ENV !== "production" && console.error(error);
 
@@ -41,12 +42,13 @@ export const list_all = async (req: Request, res: Response) => {
 
 /**
  * `GET` : `/map/:id` \
- * Provides the registered map providers found inside 'maps.json' for the given `id`
+ * Provides the registered map providers found inside 'maps.json' & 'user_maps.json' for the given `id`
  */
 export const list_id = async (req: Request, res: Response) => {
     try {
-        const id = req.params.id;
-        const map = RegisteredMaps.find((map) => map.id === id);
+        const id: string = req.params.id;
+        const maps: MapProvider[] = [...RegisteredMaps, ...RegisteredUserMaps];
+        const map = maps.find((map) => map.id === id);
 
         if (!map) {
             return res.status(404).json(<BasicResponse>{
