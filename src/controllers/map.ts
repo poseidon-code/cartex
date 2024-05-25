@@ -114,18 +114,40 @@ export const add_map = async (req: Request<{}, {}, MapProvider>, res: Response) 
                 ); // prettier-ignore
         }
 
+        const validate_provider_url = (url: string): boolean => {
+            const regex = /\{x\}|\{y\}|\{z\}/g;
+            const matches = url.match(regex);
+
+            if (matches && matches.length === 3) {
+                const unique_matches = new Set(matches);
+                return unique_matches.size === 3;
+            }
+
+            return false;
+        };
+
+        // validate `provider_url`
+        if (!validate_provider_url(new_map.provider_url)) {
+            return res
+                .status(400)
+                .json(
+                    <BasicResponse>{
+                        method: "MAP",
+                        status: res.statusCode,
+                        message: `Invalid map provider URL`,
+                    }
+                ); // prettier-ignore
+        }
+
         // append the new map provider
         RegisteredUserMaps.push(new_map);
         const file_path_1 = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../data/user_maps.json");
         fs.writeFileSync(file_path_1, JSON.stringify(RegisteredUserMaps, null, 4), "utf-8");
 
-        if (process.env.NODE_ENV === "development") {
-            // copy over user map data to 'src/data' only in development,
+        if (process.env.NODE_ENV !== "production") {
+            // copy over user map data to 'src/data/user_maps.json' only in development,
             // because when the server refreshes in 'tsc --watch' mode, it also resets the 'build/data/user_maps.json' file
-            const file_path_2 = path.resolve(
-                path.dirname(fileURLToPath(import.meta.url)),
-                "../../src/data/user_maps.json"
-            );
+            const file_path_2 = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../src/data/user_maps.json"); // prettier-ignore
             fs.writeFileSync(file_path_2, JSON.stringify(RegisteredUserMaps, null, 4), "utf-8");
         }
 
