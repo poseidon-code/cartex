@@ -1,15 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { Request, Response } from "express";
 
 import type { BasicResponse } from "../models/BasicResponse.d.ts";
-
 import Maps from "../data/maps.json" assert { type: "json" };
 import UserMaps from "../data/user_maps.json" assert { type: "json" };
-import { fileURLToPath } from "node:url";
 
-type MapProvider = {
+export type MapProvider = {
     provider: string;
     id: string;
     min_zoom: number;
@@ -18,8 +17,8 @@ type MapProvider = {
     extension: string;
 };
 
-const RegisteredMaps: MapProvider[] = Maps as MapProvider[];
-const RegisteredUserMaps: MapProvider[] = UserMaps as MapProvider[];
+export const RegisteredMaps: MapProvider[] = Maps as MapProvider[];
+export const RegisteredUserMaps: MapProvider[] = UserMaps as MapProvider[];
 
 /**
  * `GET` : `/map/` \
