@@ -5,8 +5,7 @@ import { Request, Response } from "express";
 import plimit from "p-limit";
 
 import type { BasicResponse } from "../models/BasicResponse.js";
-
-import Maps from "../data/maps.json" assert { type: "json" };
+import { RegisteredMaps, RegisteredUserMaps, MapProvider } from "./map.js";
 
 type Coordinates = {
     latitude: number;
@@ -119,7 +118,8 @@ export const download_tiles = async (req: Request<RequestParams, {}, RequestBody
     try {
         const id = req.params.id; // retrieve the map `id` from request parameters
 
-        const map = Maps.find((map) => map.id === id); // retrieve the map properties using map `id`
+        const maps: MapProvider[] = [...RegisteredMaps, ...RegisteredUserMaps]; // include both server & user map providers
+        const map = maps.find((map) => map.id === id); // retrieve the map properties using map `id`
 
         if (!map) {
             // failed to find map properties for the given map `id`
