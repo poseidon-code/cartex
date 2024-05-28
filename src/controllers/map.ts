@@ -169,3 +169,47 @@ export const add_map = async (req: Request<{}, {}, MapProvider>, res: Response) 
         });
     }
 };
+
+/**
+ * `DELETE`: `/map/:id`
+ * Delete a map provider from 'user_maps.json'.
+ */
+export const delete_map = async (req: Request<{ id: string }, {}, {}>, res: Response) => {
+    const id: string = req.params.id;
+
+    if (!RegisteredUserMaps.some((map) => map.id === id)) {
+        // check if the map with the given `id` exists
+        return res
+            .status(404)
+            .json(
+                <BasicResponse>{
+                    method: "MAP",
+                    status: res.statusCode,
+                    message: `Map with ID : '${id}' doesn't exists`,
+                }
+            ); // prettier-ignore
+    }
+
+    const new_providers = RegisteredUserMaps.filter((map) => map.id !== id);
+
+    // append the new map provider
+    const file_path_1 = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../data/user_maps.json");
+    fs.writeFileSync(file_path_1, JSON.stringify(new_providers, null, 4), "utf-8");
+
+    if (process.env.NODE_ENV !== "production") {
+        // copy over user map data to 'src/data/user_maps.json' only in development,
+        // because when the server refreshes in 'tsc --watch' mode, it also resets the 'build/data/user_maps.json' file
+        const file_path_2 = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../src/data/user_maps.json"); // prettier-ignore
+        fs.writeFileSync(file_path_2, JSON.stringify(new_providers, null, 4), "utf-8");
+    }
+
+    return res
+        .status(200)
+        .json(
+            <BasicResponse>{
+                method: "MAP",
+                status: res.statusCode,
+                message: `Map provider with ID : '${id}' is deleted`
+            }
+        ); // prettier-ignore
+};
