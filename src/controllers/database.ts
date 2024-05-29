@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { Request, Response } from "express";
 import plimit from "p-limit";
 
-import type { BasicResponse } from "../models/BasicResponse.js";
+import type { BasicResponse } from "../models/BasicResponse.d.ts";
 import { RegisteredMaps, RegisteredUserMaps, MapProvider } from "./map.js";
 
 type Coordinates = {

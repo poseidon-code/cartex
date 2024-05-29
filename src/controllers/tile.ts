@@ -1,10 +1,10 @@
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 
 import { Request, Response } from "express";
 
 import type { BasicResponse } from "../models/BasicResponse.d.ts";
-import Maps from "../data/maps.json";
+import { MapProvider, RegisteredMaps, RegisteredUserMaps } from "./map.js";
 
 export const tile_local = async (req: Request, res: Response) => {
     try {
@@ -23,7 +23,8 @@ export const tile_local = async (req: Request, res: Response) => {
         const tile_id_directory = path.join(tiles_directory, id);
 
         try {
-            const map = Maps.find((map) => map.id === id);
+            const maps: MapProvider[] = [...RegisteredMaps, ...RegisteredUserMaps];
+            const map = maps.find((map) => map.id === id);
 
             if (fs.statSync(tile_id_directory).isDirectory()) {
                 if (map) {
