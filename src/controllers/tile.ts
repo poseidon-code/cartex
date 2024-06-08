@@ -61,16 +61,7 @@ export const tile_local = async (
 
         try {
             if (!fs.statSync(tile_id_directory).isDirectory()) {
-                // check if the directory for the map provider with `id` exists
-                return res
-                .status(404)
-                .json(
-                    <BasicResponse>{
-                        method: "TILE",
-                        status: res.statusCode,
-                        message: `Tiles directory for the map with ID : '${id}' doesn't exists or not a directory.`,
-                    }
-                ); // prettier-ignore
+                throw Error();
             }
         } catch {
             // handle error thrown by 'fs.statSync()' when directory doesn't exists
@@ -110,15 +101,7 @@ export const tile_local = async (
                 // chcek if the tile image exists and is a file
                 return res.status(200).sendFile(tile_path);
             } else {
-                return res
-                    .status(404)
-                    .json(
-                        <BasicResponse>{
-                            method: "TILE",
-                            status: res.statusCode,
-                            message: `Tile for coordinates '{z:${z} , y:${y} , x:${x}}' doesn't exists or not a file (not found)`,
-                        }
-                    ); // prettier-ignore
+                throw Error();
             }
         } catch {
             // handle error thrown by 'fs.statSync()' when file doesn't exists
