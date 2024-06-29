@@ -6,6 +6,10 @@ import { Request, Response } from "express";
 import type { BasicResponse } from "../models/BasicResponse.d.ts";
 import { MapProvider, RegisteredMaps, RegisteredUserMaps } from "./map.js";
 
+/**
+ * `GET` : `/tile/local/:id?z=<value>&y=<value>&x=<value>` \
+ * Provides the map tile image for the given `x`, `y`, & `z` values
+ */
 export const tile_local = async (
     req: Request<{ id: string }, {}, { x: string; y: string; z: string }>,
     res: Response
@@ -29,7 +33,7 @@ export const tile_local = async (
         const tiles_directory = process.env.TILES_DIRECTORY;
 
         if (!tiles_directory) {
-            // check for 'TILE_DIRECTORY' environment variable
+            // check for 'TILES_DIRECTORY' environment variable
             return res
                 .status(404)
                 .json(
@@ -126,15 +130,20 @@ export const tile_local = async (
     }
 };
 
+/**
+ * `GET` : `/tile/provider/*` \
+ * Provides the map tile image for the given tile image URL
+ */
 export const tile_provider = async (req: Request, res: Response) => {
     try {
+        // parse the tile image URL
         const slug = req.url.match(/\/provider\/(.*)/);
-
         const url = (slug && slug[1]) ?? undefined;
 
         if (url) {
             let content_type: string = "image/jpg";
 
+            // fetch the image from URL
             const image_buffer = await fetch(url).then(async (fres) => {
                 if (fres.ok) {
                     const data = await fres.arrayBuffer();
@@ -150,6 +159,7 @@ export const tile_provider = async (req: Request, res: Response) => {
                 }
             });
 
+            // send the image buffer
             if (image_buffer) {
                 return res.status(200).set("Content-Type", content_type).send(image_buffer);
             }
